@@ -16,6 +16,7 @@ struct NodeInfo {
   char name[NAME_LEN + 1];  // własna nazwa, "" = "Przycisk N"
   bool enabled;
   bool online;
+  bool ready;  // kliknięty od dołączenia (do tego czasu miga)
   bool buttonDown;
   uint8_t linkQuality;  // % odebranych beaconów
   uint16_t rttUs;
@@ -36,6 +37,7 @@ bool mesh_connected();
 int64_t mesh_masterNowUs();
 int64_t mesh_toMasterUs(int64_t localUs);
 const uint8_t* mesh_selfId();
+uint8_t mesh_selfNumber();  // 0 = jeszcze nie nadany
 
 void mesh_fillHeader(MsgHeader& h, MsgType type);
 bool mesh_sendToMaster(const void* data, size_t len);

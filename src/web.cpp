@@ -120,6 +120,7 @@ void pushState() {
   d["st"] = s.state;
   d["round"] = s.round;
   d["online"] = mesh_onlineCount();
+  d["ready"] = __builtin_popcount(s.readyMask);
   d["expected"] = s.expectedNodes;
   d["lockMs"] = s.lockMs;
   if (s.state == GS_ARMED) {
@@ -144,6 +145,7 @@ void pushState() {
     o["custom"] = n.name;
     o["self"] = n.self;
     o["on"] = n.online;
+    o["rdy"] = n.ready;
     o["en"] = n.enabled;
     o["down"] = n.buttonDown;
     o["press"] = n.lastPressMs ? (long)(ms - n.lastPressMs) : -1;

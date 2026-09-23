@@ -43,7 +43,7 @@
 #define DEFAULT_LOCK_MS 5000      // jak długo świeci zwycięzca
 #define DEFAULT_EXPECTED_NODES 3  // ile przycisków musi być online do auto-startu
 #define ARBITRATION_WINDOW_MS 40  // master czeka na spóźnione pakiety i wybiera najwcześniejszy klik
-#define ROUND_START_LEAD_MS 300   // start rundy planowany z wyprzedzeniem (wszyscy ruszają naraz)
+#define ROUND_START_LEAD_MS 1000  // diody gasną na tyle przed startem gry, potem zapalają się razem
 #define PRESS_RETRY_MS 20
 #define PRESS_MAX_RETRIES 10
 #define HISTORY_SIZE 50
@@ -53,7 +53,7 @@
 // Dioda
 // ---------------------------------------------------------------------------
 #define FAST_BLINK_MS 100         // brak połączenia
-#define SLOW_BLINK_MS 500         // połączony / runda czeka na klik
+#define SLOW_BLINK_MS 500         // połączony, czeka na pierwsze kliknięcie
 #define IDENTIFY_MS 2000
 #define IDENTIFY_BLINK_MS 50
 

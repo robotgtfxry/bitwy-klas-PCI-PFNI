@@ -5,7 +5,7 @@
 #include "config.h"
 
 struct NodeSettings {
-  char name[NAME_LEN + 1];  // własna nazwa z panelu, "" = domyślna "Przycisk N"
+  char name[NAME_LEN + 1];  // własna nazwa z panelu (tylko w RAM), "" = domyślna "Przycisk N"
   bool enabled;
 };
 
@@ -17,7 +17,7 @@ struct GameConfig {
 void storage_begin();
 
 NodeSettings& storage_node();
-void storage_setName(const char* name);  // "" przywraca nazwę domyślną
+void storage_setName(const char* name);  // nie jest zapisywana – po restarcie wraca "Przycisk N"
 void storage_setEnabled(bool enabled);
 
 GameConfig& storage_config();

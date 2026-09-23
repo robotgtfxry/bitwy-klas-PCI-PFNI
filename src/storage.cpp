@@ -25,8 +25,9 @@ void copyName(char* dst, const char* src) {
 void storage_begin() {
   prefs.begin("bitwy", false);
 
-  node.name[0] = 0;  // brak własnej nazwy = "Przycisk N" wg kolejności podłączenia
-  if (prefs.isKey("name")) copyName(node.name, prefs.getString("name").c_str());
+  // Nazwa z panelu żyje tylko do restartu – po starcie zawsze "Przycisk N" wg kolejności podłączenia.
+  node.name[0] = 0;
+  if (prefs.isKey("name")) prefs.remove("name");  // sprzątanie po starszych wersjach, które ją zapisywały
   node.enabled = prefs.isKey("en") ? prefs.getBool("en") : true;
 
   cfg.lockMs = prefs.isKey("lockMs") ? prefs.getUShort("lockMs") : DEFAULT_LOCK_MS;
@@ -36,15 +37,7 @@ void storage_begin() {
 NodeSettings& storage_node() { return node; }
 
 void storage_setName(const char* name) {
-  char tmp[NAME_LEN + 1];
-  copyName(tmp, name);
-  if (strcmp(tmp, node.name) == 0) return;
-  strcpy(node.name, tmp);
-  if (tmp[0]) {
-    prefs.putString("name", tmp);
-  } else {
-    prefs.remove("name");
-  }
+  copyName(node.name, name);
 }
 
 void storage_setEnabled(bool enabled) {

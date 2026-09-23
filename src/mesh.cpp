@@ -233,6 +233,7 @@ NodeInfo* upsertNode(const uint8_t* id, const uint8_t* addr, uint8_t claim) {
   n->lastSeenMs = millis();
   if (!n->online) {
     n->online = true;
+    n->ready = false;  // (ponownie) dołączył -> miga, dopóki ktoś go nie kliknie
     Serial.printf("[MESH] Węzeł online: %s (%s), online: %d\n", nodeLabel(*n).c_str(), macToStr(id).c_str(),
                   mesh_onlineCount());
     web_notify();
@@ -279,6 +280,7 @@ void handleHello(const RxPacket& p) {
   n->buttonDown = m.buttonDown;
   n->linkQuality = m.linkQuality;
   n->rttUs = m.rttUs;
+  if (m.uptimeMs < n->uptimeMs) n->ready = false;  // płytka się zrestartowała
   n->uptimeMs = m.uptimeMs;
 }
 
@@ -439,6 +441,7 @@ void masterLoop(uint32_t now) {
   for (auto& n : nodes) {
     if (n.used && !n.self && n.online && now - n.lastSeenMs > NODE_TIMEOUT_MS) {
       n.online = false;
+      n.ready = false;
       n.buttonDown = false;
       Serial.printf("[MESH] Węzeł offline: %s, online: %d\n", nodeLabel(n).c_str(), mesh_onlineCount());
       web_notify();
@@ -500,6 +503,8 @@ int64_t mesh_masterNowUs() { return mesh_toMasterUs(esp_timer_get_time()); }
 int64_t mesh_toMasterUs(int64_t localUs) { return role == ROLE_SLAVE ? localUs + offsetUs : localUs; }
 
 const uint8_t* mesh_selfId() { return selfId; }
+
+uint8_t mesh_selfNumber() { return myNumber; }
 
 void mesh_fillHeader(MsgHeader& h, MsgType type) {
   h.magic = PROTO_MAGIC;

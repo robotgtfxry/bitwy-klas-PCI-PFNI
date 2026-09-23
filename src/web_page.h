@@ -48,6 +48,7 @@ button:disabled{opacity:.4;cursor:default}
 .badge.ok{color:var(--ok);border-color:currentColor}
 .badge.bad{color:var(--bad);border-color:currentColor}
 .badge.m{color:var(--accent);border-color:currentColor}
+.badge.w{color:var(--gold);border-color:currentColor}
 .badge.p{color:#fff;background:var(--press);border-color:var(--press)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px;font-size:12px;color:var(--muted)}
 .stats b{display:block;font-size:18px;color:var(--text);font-variant-numeric:tabular-nums}
@@ -76,10 +77,6 @@ th{font-size:12px;font-weight:500;color:var(--muted)}
     <div class="btns"><button class="primary">Tak</button><button class="primary">Oczywiście</button></div>
   </div>
 </div>
-<header>
-  <h1>Bitwy Klas – przyciski</h1>
-  <div class="conn"><span class="dot" id="dot"></span><span id="conn">łączenie…</span></div>
-</header>
 <main>
   <section class="card status" id="status">
     <div class="label" id="stLabel">—</div>
@@ -123,8 +120,7 @@ let ws=null,S=null,rxAt=0;
 function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 function connect(){
   ws=new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen=()=>{$('dot').classList.add('ok');$('conn').textContent='połączono'};
-  ws.onclose=()=>{$('dot').classList.remove('ok');$('conn').textContent='rozłączono – ponawiam…';setTimeout(connect,1000)};
+  ws.onclose=()=>setTimeout(connect,1000);
   ws.onmessage=e=>{
     const m=JSON.parse(e.data);
     if(m.t==='s'){S=m;rxAt=performance.now();render()}
@@ -139,7 +135,7 @@ function renderStatus(){
   const dt=performance.now()-rxAt;
   let label,big,sub;
   switch(S.st){
-    case 0:label='Oczekiwanie na przyciski';big=`${S.online} / ${S.expected}`;sub='Gra ruszy sama, gdy połączą się wszystkie przyciski (albo kliknij Start).';break;
+    case 0:label='Gotowe przyciski';big=`${S.ready} / ${S.expected}`;sub='Migający przycisk czeka na kliknięcie. Gra ruszy sama, gdy wszystkie będą gotowe (albo kliknij Start).';break;
     case 1:{
       label=`Runda ${S.round}`;
       const left=S.elapsed<0?S.startsIn-dt:-(S.elapsed+dt);
@@ -180,6 +176,7 @@ function render(){
     let b='';
     if(n.self)b+='<span class="badge m">MASTER</span>';
     b+=n.on?'<span class="badge ok">online</span>':'<span class="badge bad">offline</span>';
+    if(n.on)b+=n.rdy?'<span class="badge ok">gotowy</span>':'<span class="badge w">miga – kliknij go</span>';
     if(!n.en)b+='<span class="badge bad">wyłączony z gry</span>';
     if(n.down)b+='<span class="badge p">wciśnięty</span>';
     el.querySelector('.badges').innerHTML=b;

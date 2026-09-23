@@ -124,12 +124,34 @@ void decide(int64_t now) {
   changed();
 }
 
+void updateReadyMask() {
+  uint16_t mask = 0;
+  NodeInfo* nodes = mesh_nodes();
+  for (int i = 0; i < MAX_NODES; i++) {
+    const NodeInfo& n = nodes[i];
+    if (n.used && n.online && n.ready && n.number >= 1 && n.number <= 16) mask |= 1u << (n.number - 1);
+  }
+  if (mask == snap.readyMask) return;
+  snap.readyMask = mask;
+  changed();
+}
+
 void masterPress(NodeInfo* n, uint16_t round, int64_t ts, bool down) {
   if (!n) return;
   n->buttonDown = down;
   if (down) n->lastPressMs = millis();
   web_notify();
   if (!down) return;
+
+  if (!n->ready) {
+    // Pierwszy klik po dołączeniu tylko potwierdza przycisk (przestaje migać) – nie liczy się w grze.
+    if (!n->self || mesh_connected()) {
+      n->ready = true;
+      Serial.printf("[GRA] %s gotowy\n", nodeLabel(*n).c_str());
+      updateReadyMask();
+    }
+    return;
+  }
 
   masterAdvance(mesh_masterNowUs());
   if (snap.state != GS_ARMED || round != snap.round) return;
@@ -156,10 +178,16 @@ void masterLoop() {
   masterAdvance(now);
   int online = mesh_onlineCount();
 
+  // Master bez żadnego slave'a nie jest połączony – po dołączeniu kogoś też musi zostać kliknięty.
+  NodeInfo* self = mesh_findNode(mesh_selfId());
+  if (self && online < 2) self->ready = false;
+  updateReadyMask();
+  int ready = __builtin_popcount(snap.readyMask);
+
   switch (snap.state) {
     case GS_LOBBY:
-      if (online >= 2 && online >= snap.expectedNodes) {
-        Serial.printf("[GRA] Komplet przycisków (%d) – start gry\n", online);
+      if (ready >= 2 && ready >= snap.expectedNodes) {
+        Serial.printf("[GRA] Wszystkie przyciski gotowe (%d) – start gry\n", ready);
         startRound(now + ROUND_START_LEAD_MS * 1000LL);
       }
       break;
@@ -198,7 +226,7 @@ void handleButton(bool down, int64_t tsLocal) {
   m.down = down;
   mesh_sendToMaster(&m, sizeof(m));
 
-  if (down && s.state == GS_ARMED) {  // tylko klik w trwającej rundzie ponawiamy do skutku
+  if (down) {  // wciśnięcie ponawiamy do potwierdzenia przez mastera
     pending = m;
     pendingActive = true;
     pendingTries = 1;
@@ -209,8 +237,7 @@ void handleButton(bool down, int64_t tsLocal) {
 
 void retryPending() {
   if (!pendingActive) return;
-  GameSnapshot s = game_effective(mesh_masterNowUs());
-  if (!mesh_connected() || s.state != GS_ARMED || s.round != pending.round || pendingTries >= PRESS_MAX_RETRIES) {
+  if (!mesh_connected() || pendingTries >= PRESS_MAX_RETRIES) {
     pendingActive = false;
     return;
   }
@@ -232,6 +259,11 @@ void sendCmd(const uint8_t* id, CmdType cmd, uint8_t value, const char* name) {
 }
 
 bool isSelf(const uint8_t* id) { return memcmp(id, mesh_selfId(), 6) == 0; }
+
+bool selfReady() {
+  uint8_t num = mesh_selfNumber();
+  return num >= 1 && num <= 16 && (snap.readyMask & (1u << (num - 1)));
+}
 
 }  // namespace
 
@@ -280,18 +312,22 @@ LedMode game_ledMode(int64_t& phaseUs) {
 
   int64_t now = mesh_masterNowUs();
   GameSnapshot s = game_effective(now);
+  if (s.state == GS_TEST) return button_isDown() ? LED_ON : LED_OFF;
+
+  if (!selfReady()) {  // dołączył i jeszcze nikt go nie kliknął
+    phaseUs = now;     // czas mastera -> niepotwierdzone przyciski migają razem
+    return LED_SLOW;
+  }
+
   switch (s.state) {
     case GS_LOBBY:
-      phaseUs = now;
-      return LED_SLOW;
+      return LED_ON;  // gotowy, czeka na pozostałe
     case GS_ARMED:
+      // Przed startem rundy chwila ciemności, potem wszystkie zapalają się w tej samej chwili.
       if (!storage_node().enabled || now < s.roundStartAt) return LED_OFF;
-      phaseUs = now - s.roundStartAt;  // wszystkie diody zapalają się dokładnie na start rundy
-      return LED_SLOW;
+      return LED_ON;
     case GS_LOCKED:
       return isSelf(s.winner) ? LED_ON : LED_OFF;
-    case GS_TEST:
-      return button_isDown() ? LED_ON : LED_OFF;
     default:
       return LED_OFF;
   }
