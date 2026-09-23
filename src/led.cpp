@@ -11,16 +11,21 @@ bool identifyActive = false;
 int lastLevel = -1;
 
 void write(bool on) {
-  int level = (on == (bool)LED_ACTIVE_HIGH) ? HIGH : LOW;
-  if (level == lastLevel) return;
-  digitalWrite(LED_PIN, level);
-  lastLevel = level;
+  if ((int)on == lastLevel) return;
+  digitalWrite(LED_PIN, on == (bool)LED_ACTIVE_HIGH ? HIGH : LOW);
+#if ONBOARD_LED_PIN >= 0
+  digitalWrite(ONBOARD_LED_PIN, on == (bool)ONBOARD_LED_ACTIVE_HIGH ? HIGH : LOW);
+#endif
+  lastLevel = on;
 }
 
 }  // namespace
 
 void led_begin() {
   pinMode(LED_PIN, OUTPUT);
+#if ONBOARD_LED_PIN >= 0
+  pinMode(ONBOARD_LED_PIN, OUTPUT);
+#endif
   write(false);
 }
 

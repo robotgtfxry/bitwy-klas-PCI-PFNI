@@ -31,6 +31,7 @@ struct SyncSample {
 };
 
 QueueHandle_t rxQueue;
+bool espNowActive = false;
 Role role = ROLE_SEARCHING;
 uint8_t selfId[6];
 
@@ -100,7 +101,11 @@ bool ensurePeer(const uint8_t* addr) {
 }
 
 void radioInit(bool asMaster) {
-  esp_now_deinit();
+  // esp_now_deinit() przed pierwszym esp_now_init() wysypuje IDF 4.4 (null pointer).
+  if (espNowActive) {
+    esp_now_deinit();
+    espNowActive = false;
+  }
   WiFi.persistent(false);
   if (asMaster) {
     // Jedno radio: punkt dostępowy do konfiguracji + ESP-NOW na tym samym kanale.
@@ -120,6 +125,7 @@ void radioInit(bool asMaster) {
     delay(100);
     ESP.restart();
   }
+  espNowActive = true;
   esp_now_register_recv_cb(onRecv);
   ensurePeer(BROADCAST);
 }

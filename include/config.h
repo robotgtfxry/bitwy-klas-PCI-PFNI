@@ -7,6 +7,8 @@
 #define LED_PIN 5             // D5 – dioda
 #define BUTTON_ACTIVE_LOW 1   // 1: przycisk zwiera pin do GND (wewnętrzny pull-up)
 #define LED_ACTIVE_HIGH 1     // 1: stan wysoki = dioda świeci
+#define ONBOARD_LED_PIN 2     // wbudowana dioda płytki, powtarza diodę z D5 (-1 = wyłączone)
+#define ONBOARD_LED_ACTIVE_HIGH 1
 
 // ---------------------------------------------------------------------------
 // Radio / sieć
