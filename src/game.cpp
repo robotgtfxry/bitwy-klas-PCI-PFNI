@@ -48,8 +48,7 @@ void resetSnapshot() {
 
 const char* nodeName(const uint8_t* id, String& buf) {
   NodeInfo* n = mesh_findNode(id);
-  if (n) return n->name;
-  buf = macToStr(id);
+  buf = n ? nodeLabel(*n) : macToStr(id);
   return buf.c_str();
 }
 
@@ -148,7 +147,8 @@ void masterPress(NodeInfo* n, uint16_t round, int64_t ts, bool down) {
   memcpy(cands[candCount].id, n->id, 6);
   cands[candCount].ts = ts;
   candCount++;
-  Serial.printf("[GRA] Klik: %s, +%.2f ms od startu rundy\n", n->name, (ts - snap.roundStartAt) / 1000.0);
+  Serial.printf("[GRA] Klik: %s, +%.2f ms od startu rundy\n", nodeLabel(*n).c_str(),
+                (ts - snap.roundStartAt) / 1000.0);
 }
 
 void masterLoop() {
@@ -328,7 +328,7 @@ void game_onCmd(const CmdMsg& m) {
       memcpy(name, m.name, NAME_LEN);
       name[NAME_LEN] = 0;
       storage_setName(name);
-      Serial.printf("[CMD] Nowa nazwa: %s\n", storage_node().name);
+      Serial.printf("[CMD] Nowa nazwa: %s\n", storage_node().name[0] ? storage_node().name : "(domyślna)");
       break;
     }
     case CMD_SET_ENABLED:
@@ -387,8 +387,8 @@ void game_cmdIdentify(const uint8_t* id) {
 
 void game_cmdRename(const uint8_t* id, const char* name) {
   NodeInfo* n = mesh_findNode(id);
-  if (!n || !name[0]) return;
-  copyName(n->name, name);
+  if (!n) return;
+  copyName(n->name, name);  // "" = powrót do "Przycisk N"
   if (isSelf(id)) {
     storage_setName(name);
   } else {

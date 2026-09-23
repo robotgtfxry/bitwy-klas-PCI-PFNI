@@ -12,7 +12,8 @@ struct NodeInfo {
   bool self;
   uint8_t id[6];    // MAC STA – stałe ID płytki
   uint8_t addr[6];  // adres ESP-NOW, pod który wysyłamy
-  char name[NAME_LEN + 1];
+  uint8_t number;   // kolejność podłączenia: 1, 2, 3...
+  char name[NAME_LEN + 1];  // własna nazwa, "" = "Przycisk N"
   bool enabled;
   bool online;
   bool buttonDown;
@@ -46,5 +47,7 @@ NodeInfo* mesh_nodes();  // MAX_NODES elementów
 NodeInfo* mesh_findNode(const uint8_t* id);
 int mesh_onlineCount();
 
+// Nazwa do wyświetlenia: własna z panelu albo "Przycisk N".
+String nodeLabel(const NodeInfo& n);
 String macToStr(const uint8_t* mac);
 bool strToMac(const char* s, uint8_t* mac);

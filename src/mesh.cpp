@@ -34,6 +34,7 @@ QueueHandle_t rxQueue;
 bool espNowActive = false;
 Role role = ROLE_SEARCHING;
 uint8_t selfId[6];
+uint8_t myNumber;  // nadany przez mastera; trzymany w RAM – numeracja liczy się od włączenia zestawu
 
 // --- slave ---
 uint8_t masterAddr[6];
@@ -162,8 +163,11 @@ void becomeMaster() {
   memcpy(self.id, selfId, 6);
   memcpy(self.addr, selfId, 6);
   self.online = true;
+  // Pierwsza włączona płytka to 1. Po awarii mastera nowy master zachowuje swój dotychczasowy numer.
+  if (myNumber == 0) myNumber = 1;
+  self.number = myNumber;
 
-  Serial.printf("[MESH] Zostaję MASTEREM. Wi-Fi: \"%s\", panel: http://%s\n", AP_SSID,
+  Serial.printf("[MESH] Zostaję MASTEREM (przycisk %u). Wi-Fi: \"%s\", panel: http://%s\n", myNumber, AP_SSID,
                 WiFi.softAPIP().toString().c_str());
   game_onRoleChanged(role);
   web_begin();
@@ -187,7 +191,22 @@ void becomeSlave(const uint8_t* addr, const uint8_t* id) {
   game_onRoleChanged(role);
 }
 
-NodeInfo* upsertNode(const uint8_t* id, const uint8_t* addr) {
+bool numberTaken(uint8_t number, const NodeInfo* except) {
+  for (auto& x : nodes) {
+    if (x.used && &x != except && x.number == number) return true;
+  }
+  return false;
+}
+
+// Zgłoszony numer (jeśli wolny), inaczej najniższy wolny – kolejne płytki dostają 2, 3...
+uint8_t assignNumber(uint8_t claim, const NodeInfo* n) {
+  if (claim && !numberTaken(claim, n)) return claim;
+  uint8_t k = 1;
+  while (numberTaken(k, n)) k++;
+  return k;
+}
+
+NodeInfo* upsertNode(const uint8_t* id, const uint8_t* addr, uint8_t claim) {
   NodeInfo* n = mesh_findNode(id);
   if (!n) {
     for (auto& x : nodes) {
@@ -206,15 +225,16 @@ NodeInfo* upsertNode(const uint8_t* id, const uint8_t* addr) {
     *n = NodeInfo{};
     n->used = true;
     memcpy(n->id, id, 6);
-    defaultNodeName(n->name, id);
     n->enabled = true;
+    n->number = assignNumber(claim, n);
   }
   memcpy(n->addr, addr, 6);
   ensurePeer(addr);
   n->lastSeenMs = millis();
   if (!n->online) {
     n->online = true;
-    Serial.printf("[MESH] Węzeł online: %s (%s), online: %d\n", n->name, macToStr(id).c_str(), mesh_onlineCount());
+    Serial.printf("[MESH] Węzeł online: %s (%s), online: %d\n", nodeLabel(*n).c_str(), macToStr(id).c_str(),
+                  mesh_onlineCount());
     web_notify();
   }
   return n;
@@ -251,7 +271,7 @@ void handleBeacon(const RxPacket& p) {
 void handleHello(const RxPacket& p) {
   HelloMsg m;
   if (role != ROLE_MASTER || !readMsg(p, m)) return;
-  NodeInfo* n = upsertNode(m.h.id, p.src);
+  NodeInfo* n = upsertNode(m.h.id, p.src, m.number);
   if (!n) return;
   m.name[NAME_LEN] = 0;
   copyName(n->name, m.name);
@@ -265,9 +285,11 @@ void handleHello(const RxPacket& p) {
 void handleSyncReq(const RxPacket& p) {
   SyncReqMsg m;
   if (role != ROLE_MASTER || !readMsg(p, m)) return;
-  if (!upsertNode(m.h.id, p.src)) return;
+  NodeInfo* n = upsertNode(m.h.id, p.src, m.number);
+  if (!n) return;
   SyncRespMsg r = {};
   mesh_fillHeader(r.h, MSG_SYNC_RESP);
+  r.number = n->number;
   r.t1 = m.t1;
   r.t2 = p.rxUs;
   r.t3 = esp_timer_get_time();
@@ -277,6 +299,11 @@ void handleSyncReq(const RxPacket& p) {
 void handleSyncResp(const RxPacket& p) {
   SyncRespMsg m;
   if (role != ROLE_SLAVE || !readMsg(p, m) || memcmp(p.src, masterAddr, 6) != 0) return;
+  if (m.number && m.number != myNumber) {
+    myNumber = m.number;
+    Serial.printf("[MESH] Jestem przyciskiem nr %u\n", myNumber);
+  }
+
   int64_t t4 = p.rxUs;
   int64_t rtt = (t4 - m.t1) - (m.t3 - m.t2);
   if (rtt < 0 || rtt > SYNC_MAX_RTT_US) return;  // retransmisje / śmieci
@@ -302,7 +329,7 @@ void handleSyncResp(const RxPacket& p) {
 void handlePress(const RxPacket& p) {
   PressMsg m;
   if (role != ROLE_MASTER || !readMsg(p, m)) return;
-  NodeInfo* n = upsertNode(m.h.id, p.src);
+  NodeInfo* n = upsertNode(m.h.id, p.src, 0);
   if (n) game_onPress(n, m);
 }
 
@@ -345,6 +372,7 @@ void sendBeacon() {
 void sendHello() {
   HelloMsg m = {};
   mesh_fillHeader(m.h, MSG_HELLO);
+  m.number = myNumber;
   copyName(m.name, storage_node().name);
   m.enabled = storage_node().enabled;
   m.buttonDown = button_isDown();
@@ -357,6 +385,7 @@ void sendHello() {
 void sendSyncReq() {
   SyncReqMsg m = {};
   mesh_fillHeader(m.h, MSG_SYNC_REQ);
+  m.number = myNumber;
   m.t1 = esp_timer_get_time();
   mesh_sendToMaster(&m, sizeof(m));
 }
@@ -411,7 +440,7 @@ void masterLoop(uint32_t now) {
     if (n.used && !n.self && n.online && now - n.lastSeenMs > NODE_TIMEOUT_MS) {
       n.online = false;
       n.buttonDown = false;
-      Serial.printf("[MESH] Węzeł offline: %s, online: %d\n", n.name, mesh_onlineCount());
+      Serial.printf("[MESH] Węzeł offline: %s, online: %d\n", nodeLabel(n).c_str(), mesh_onlineCount());
       web_notify();
     }
   }
@@ -419,7 +448,7 @@ void masterLoop(uint32_t now) {
   if ((int32_t)(now - nextLogMs) >= 0) {
     Serial.printf("[MESH] MASTER, online %d:", mesh_onlineCount());
     for (auto& n : nodes) {
-      if (n.used && n.online) Serial.printf(" [%s RTT %uus %u%%]", n.name, n.rttUs, n.linkQuality);
+      if (n.used && n.online) Serial.printf(" [%s RTT %uus %u%%]", nodeLabel(n).c_str(), n.rttUs, n.linkQuality);
     }
     Serial.println();
     nextLogMs = now + 10000;
@@ -433,7 +462,8 @@ void masterLoop(uint32_t now) {
 void mesh_begin() {
   esp_read_mac(selfId, ESP_MAC_WIFI_STA);
   rxQueue = xQueueCreate(24, sizeof(RxPacket));
-  Serial.printf("[MESH] ID płytki: %s, nazwa: %s\n", macToStr(selfId).c_str(), storage_node().name);
+  Serial.printf("[MESH] ID płytki: %s%s%s\n", macToStr(selfId).c_str(), storage_node().name[0] ? ", nazwa: " : "",
+                storage_node().name);
   role = ROLE_SEARCHING;
   radioInit(false);
   startSearching();
@@ -512,6 +542,11 @@ int mesh_onlineCount() {
     if (n.used && n.online) c++;
   }
   return c;
+}
+
+String nodeLabel(const NodeInfo& n) {
+  if (n.name[0]) return String(n.name);
+  return n.number ? "Przycisk " + String(n.number) : String("Przycisk ?");
 }
 
 String macToStr(const uint8_t* mac) {

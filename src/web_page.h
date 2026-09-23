@@ -38,6 +38,9 @@ button:disabled{opacity:.4;cursor:default}
 .node.off{opacity:.5}
 .node.pressed{box-shadow:inset 0 0 0 3px var(--press)}
 .node.winner{box-shadow:inset 0 0 0 3px var(--gold)}
+.head{display:flex;align-items:center;gap:12px}
+.no{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;font-size:24px;font-weight:700}
+.node.off .no{background:var(--muted)}
 .nm{font-size:18px;font-weight:650;word-break:break-word}
 .mac{font:12px ui-monospace,Consolas,monospace;color:var(--muted)}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
@@ -58,9 +61,21 @@ th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-
 th{font-size:12px;font-weight:500;color:var(--muted)}
 .num{font-variant-numeric:tabular-nums}
 .empty{color:var(--muted);font-size:14px}
+.modal{position:fixed;top:0;right:0;bottom:0;left:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.55)}
+.modal[hidden]{display:none}
+.modal .card{width:100%;max-width:420px;padding:24px;text-align:center}
+.modal .q{margin:0 0 20px;font-size:20px;font-weight:650}
+.modal .btns{justify-content:center}
+.modal button{min-width:130px;padding:12px 18px;font-size:16px}
 </style>
 </head>
 <body>
+<div class="modal" id="poll">
+  <div class="card">
+    <p class="q">Czy Michał Jaksan jest najlepszym Ambasadorem PCI?</p>
+    <div class="btns"><button class="primary">Tak</button><button class="primary">Oczywiście</button></div>
+  </div>
+</div>
 <header>
   <h1>Bitwy Klas – przyciski</h1>
   <div class="conn"><span class="dot" id="dot"></span><span id="conn">łączenie…</span></div>
@@ -146,7 +161,7 @@ function nodeEl(id){
   let el=$('nodes').querySelector(`[data-id="${id}"]`);
   if(el)return el;
   el=document.createElement('div');el.className='card node';el.dataset.id=id;
-  el.innerHTML=`<div class="nm"></div><div class="mac"></div><div class="badges"></div>
+  el.innerHTML=`<div class="head"><div class="no"></div><div><div class="nm"></div><div class="mac"></div></div></div><div class="badges"></div>
   <div class="stats"><div><b class="wins"></b>wygrane</div><div><b class="q"></b>łącze</div><div><b class="rtt"></b>opóźnienie</div></div>
   <div class="btns"><button data-a="identify">Identyfikuj</button><button data-a="name">Zmień nazwę</button><button data-a="enable"></button></div>`;
   $('nodes').appendChild(el);return el;
@@ -155,9 +170,11 @@ function nodeEl(id){
 function render(){
   renderStatus();
   const ids=new Set();
+  S.nodes.sort((a,b)=>(a.num||99)-(b.num||99));
   for(const n of S.nodes){
     ids.add(n.id);
     const el=nodeEl(n.id);
+    el.querySelector('.no').textContent=n.num||'?';
     el.querySelector('.nm').textContent=n.name;
     el.querySelector('.mac').textContent=n.id;
     let b='';
@@ -176,6 +193,8 @@ function render(){
     el.querySelectorAll('button').forEach(x=>x.disabled=!n.on);
   }
   $('nodes').querySelectorAll('.node').forEach(el=>{if(!ids.has(el.dataset.id))el.remove()});
+  const order=S.nodes.map(n=>n.id),box=$('nodes');
+  if([...box.children].map(el=>el.dataset.id).join()!==order.join())order.forEach(id=>box.appendChild(nodeEl(id)));
   $('nodesTitle').textContent=`Przyciski (${S.online} online)`;
 
   const playing=S.st===1||S.st===2;
@@ -203,10 +222,11 @@ $('nodes').addEventListener('click',e=>{
   if(a==='identify')send({c:'identify',id});
   else if(a==='enable')send({c:'enable',id,on:!n.en});
   else if(a==='name'){
-    const v=prompt('Nowa nazwa przycisku (np. Klasa 1A):',n.name);
-    if(v===null)return;const name=trimName(v);if(name)send({c:'name',id,name});
+    const v=prompt(`Nazwa przycisku nr ${n.num} (np. Klasa 1A). Puste = „Przycisk ${n.num}”:`,n.custom);
+    if(v===null)return;send({c:'name',id,name:trimName(v)});
   }
 });
+$('poll').addEventListener('click',e=>{if(e.target.closest('button'))$('poll').hidden=true});
 $('bStart').onclick=()=>send({c:'start'});
 $('bNext').onclick=()=>send({c:'next'});
 $('bStop').onclick=()=>send({c:'stop'});

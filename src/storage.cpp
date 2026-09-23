@@ -2,10 +2,6 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
-#include <esp_system.h>
-#if __has_include(<esp_mac.h>)
-#include <esp_mac.h>
-#endif
 
 namespace {
 
@@ -26,16 +22,10 @@ void copyName(char* dst, const char* src) {
   dst[n] = 0;
 }
 
-void defaultNodeName(char* dst, const uint8_t* id) {
-  snprintf(dst, NAME_LEN + 1, "Przycisk-%02X%02X", id[4], id[5]);
-}
-
 void storage_begin() {
   prefs.begin("bitwy", false);
 
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_STA);
-  defaultNodeName(node.name, mac);
+  node.name[0] = 0;  // brak własnej nazwy = "Przycisk N" wg kolejności podłączenia
   if (prefs.isKey("name")) copyName(node.name, prefs.getString("name").c_str());
   node.enabled = prefs.isKey("en") ? prefs.getBool("en") : true;
 
@@ -48,9 +38,13 @@ NodeSettings& storage_node() { return node; }
 void storage_setName(const char* name) {
   char tmp[NAME_LEN + 1];
   copyName(tmp, name);
-  if (!tmp[0] || strcmp(tmp, node.name) == 0) return;
+  if (strcmp(tmp, node.name) == 0) return;
   strcpy(node.name, tmp);
-  prefs.putString("name", node.name);
+  if (tmp[0]) {
+    prefs.putString("name", tmp);
+  } else {
+    prefs.remove("name");
+  }
 }
 
 void storage_setEnabled(bool enabled) {

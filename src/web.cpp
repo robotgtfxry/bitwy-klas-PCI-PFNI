@@ -105,9 +105,9 @@ void execute(const WebCmd& cmd) {
   dirty = true;
 }
 
-const char* nameOf(const uint8_t* id) {
+String nameOf(const uint8_t* id) {
   NodeInfo* n = mesh_findNode(id);
-  return n ? n->name : "?";
+  return n ? nodeLabel(*n) : String("?");
 }
 
 void pushState() {
@@ -139,7 +139,9 @@ void pushState() {
     if (!n.used) continue;
     JsonObject o = arr.add<JsonObject>();
     o["id"] = macToStr(n.id);
-    o["name"] = n.name;
+    o["num"] = n.number;
+    o["name"] = nodeLabel(n);
+    o["custom"] = n.name;
     o["self"] = n.self;
     o["on"] = n.online;
     o["en"] = n.enabled;

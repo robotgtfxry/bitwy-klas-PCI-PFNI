@@ -5,7 +5,7 @@
 #include "config.h"
 
 #define PROTO_MAGIC 0xB17A
-#define PROTO_VERSION 1
+#define PROTO_VERSION 2
 
 enum MsgType : uint8_t {
   MSG_BEACON = 1,  // master -> wszyscy (broadcast)
@@ -53,9 +53,12 @@ struct __attribute__((packed)) BeaconMsg {
   GameSnapshot game;
 };
 
+// number w HELLO/SYNC_REQ: numer, który płytka dostała wcześniej (0 = jeszcze żaden) –
+// dzięki temu po zmianie mastera przyciski zachowują swoje numery.
 struct __attribute__((packed)) HelloMsg {
   MsgHeader h;
-  char name[NAME_LEN + 1];
+  uint8_t number;
+  char name[NAME_LEN + 1];  // własna nazwa z panelu, "" = domyślna "Przycisk N"
   uint8_t enabled;
   uint8_t buttonDown;
   uint8_t linkQuality;
@@ -65,11 +68,13 @@ struct __attribute__((packed)) HelloMsg {
 
 struct __attribute__((packed)) SyncReqMsg {
   MsgHeader h;
+  uint8_t number;
   int64_t t1;
 };
 
 struct __attribute__((packed)) SyncRespMsg {
   MsgHeader h;
+  uint8_t number;  // numer nadany tej płytce przez mastera
   int64_t t1;
   int64_t t2;
   int64_t t3;
