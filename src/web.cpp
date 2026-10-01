@@ -22,6 +22,7 @@ enum WebCmdType : uint8_t {
   WC_NAME,
   WC_ENABLE,
   WC_CONFIG,
+  WC_LIGHTS,
 };
 
 struct WebCmd {
@@ -73,6 +74,9 @@ void onWsEvent(AsyncWebSocket*, AsyncWebSocketClient*, AwsEventType type, void* 
     cmd.type = WC_CONFIG;
     cmd.a = doc["lockMs"] | (int)DEFAULT_LOCK_MS;
     cmd.b = doc["expected"] | (int)DEFAULT_EXPECTED_NODES;
+  } else if (!strcmp(c, "led")) {
+    cmd.type = WC_LIGHTS;
+    cmd.a = doc["color"] | (int)LED_STRIP_COLOR;
   } else if (!strcmp(c, "identify") || !strcmp(c, "name") || !strcmp(c, "enable")) {
     if (!strToMac(doc["id"] | "", cmd.id)) return;
     if (c[0] == 'i') {
@@ -101,6 +105,7 @@ void execute(const WebCmd& cmd) {
     case WC_NAME: game_cmdRename(cmd.id, cmd.name); break;
     case WC_ENABLE: game_cmdEnable(cmd.id, cmd.a); break;
     case WC_CONFIG: game_cmdConfig(cmd.a, cmd.b); break;
+    case WC_LIGHTS: game_cmdLights(cmd.a); break;
   }
   dirty = true;
 }
@@ -123,6 +128,7 @@ void pushState() {
   d["ready"] = __builtin_popcount(s.readyMask);
   d["expected"] = s.expectedNodes;
   d["lockMs"] = s.lockMs;
+  d["ledC"] = s.stripColor;
   if (s.state == GS_ARMED) {
     d["elapsed"] = now >= s.roundStartAt ? (long)((now - s.roundStartAt) / 1000) : -1;
     d["startsIn"] = now < s.roundStartAt ? (long)((s.roundStartAt - now) / 1000) : 0;

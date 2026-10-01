@@ -9,6 +9,9 @@ void led_begin();
 // Krótka seria bardzo szybkich mrugnięć – nadpisuje bieżący tryb na IDENTIFY_MS.
 void led_identify();
 
+// Kolor taśmy LED (0xRRGGBB); świecąca taśma zmienia się od razu.
+void led_setStripColor(uint32_t color);
+
 // phaseUs: dla LED_SLOW czas (zegar mastera), od którego liczona jest faza migania.
 // Dzięki temu wszystkie płytki migają w tym samym rytmie.
 void led_update(LedMode mode, int64_t phaseUs);

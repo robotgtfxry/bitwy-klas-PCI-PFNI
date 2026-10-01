@@ -32,6 +32,7 @@ void storage_begin() {
 
   cfg.lockMs = prefs.isKey("lockMs") ? prefs.getUShort("lockMs") : DEFAULT_LOCK_MS;
   cfg.expectedNodes = prefs.isKey("expN") ? prefs.getUChar("expN") : DEFAULT_EXPECTED_NODES;
+  cfg.stripColor = prefs.isKey("ledC") ? prefs.getUInt("ledC") : LED_STRIP_COLOR;
 }
 
 NodeSettings& storage_node() { return node; }
@@ -54,4 +55,10 @@ void storage_setConfig(uint16_t lockMs, uint8_t expectedNodes) {
   cfg.expectedNodes = expectedNodes;
   prefs.putUShort("lockMs", lockMs);
   prefs.putUChar("expN", expectedNodes);
+}
+
+void storage_setStripColor(uint32_t color) {
+  if (cfg.stripColor == color) return;
+  cfg.stripColor = color;
+  prefs.putUInt("ledC", color);
 }

@@ -43,6 +43,7 @@ void resetSnapshot() {
   snap.state = GS_LOBBY;
   snap.lockMs = storage_config().lockMs;
   snap.expectedNodes = storage_config().expectedNodes;
+  snap.stripColor = storage_config().stripColor;
   candCount = 0;
 }
 
@@ -271,6 +272,7 @@ bool selfReady() {
 
 void game_begin() {
   resetSnapshot();
+  led_setStripColor(snap.stripColor);
   pressSeq = esp_random();  // po restarcie płytki master nie weźmie nowych klików za powtórki
 }
 
@@ -319,24 +321,16 @@ LedMode game_ledMode(int64_t& phaseUs) {
     return LED_SLOW;
   }
 
-  switch (s.state) {
-    case GS_LOBBY:
-      return LED_ON;  // gotowy, czeka na pozostałe
-    case GS_ARMED:
-      // Przed startem rundy chwila ciemności, potem wszystkie zapalają się w tej samej chwili.
-      if (!storage_node().enabled || now < s.roundStartAt) return LED_OFF;
-      return LED_ON;
-    case GS_LOCKED:
-      return isSelf(s.winner) ? LED_ON : LED_OFF;
-    default:
-      return LED_OFF;
-  }
+  // Diody są zgaszone; świeci tylko zwycięzca, od kliknięcia do końca blokady (lockMs).
+  return s.state == GS_LOCKED && isSelf(s.winner) ? LED_ON : LED_OFF;
 }
 
 void game_onBeacon(const GameSnapshot& s) {
   snap = s;
   // Zapamiętaj ustawienia – przydadzą się, gdyby ta płytka została kiedyś masterem.
   storage_setConfig(s.lockMs, s.expectedNodes);
+  storage_setStripColor(s.stripColor);
+  led_setStripColor(s.stripColor);
 }
 
 void game_onPress(NodeInfo* n, const PressMsg& m) {
@@ -454,6 +448,15 @@ void game_cmdConfig(uint32_t lockMs, uint32_t expectedNodes) {
   Serial.printf("[GRA] Ustawienia: blokada %u ms, start przy %u przyciskach\n", (unsigned)lockMs,
                 (unsigned)expectedNodes);
   changed();
+}
+
+void game_cmdLights(uint32_t color) {
+  color &= 0xFFFFFF;
+  storage_setStripColor(color);
+  snap.stripColor = color;
+  led_setStripColor(color);
+  Serial.printf("[GRA] Światła: kolor #%06X\n", (unsigned)color);
+  changed();  // beacon od razu – slave'y przejmują kolor i zapisują go u siebie
 }
 
 int game_historyCount() { return histCount; }

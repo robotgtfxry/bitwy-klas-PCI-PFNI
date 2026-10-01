@@ -10,6 +10,14 @@
 #define ONBOARD_LED_PIN 2     // wbudowana dioda płytki, powtarza diodę z D5 (-1 = wyłączone)
 #define ONBOARD_LED_ACTIVE_HIGH 1
 
+// Taśma LED adresowana (WS2812B / NeoPixel, 5V–DI–GND) – świeci dokładnie tak jak dioda z D5
+#define LED_STRIP_PIN 13          // D13 -> DI taśmy (-1 = wyłączone)
+#define LED_STRIP_COUNT 30        // liczba diod na taśmie
+// Taśma świeci zawsze pełną jasnością (pełna biel = ~60 mA na diodę – dłuższą taśmę zasilać osobno).
+// Kolor ustawia się w panelu WWW (master rozsyła go w beaconie) – poniżej wartość fabryczna.
+#define LED_STRIP_COLOR 0xFFFFFF  // kolor świecenia, 0xRRGGBB
+#define LED_STRIP_TYPE (NEO_GRB + NEO_KHZ800)
+
 // ---------------------------------------------------------------------------
 // Radio / sieć
 // ---------------------------------------------------------------------------
@@ -43,7 +51,7 @@
 #define DEFAULT_LOCK_MS 5000      // jak długo świeci zwycięzca
 #define DEFAULT_EXPECTED_NODES 3  // ile przycisków musi być online do auto-startu
 #define ARBITRATION_WINDOW_MS 40  // master czeka na spóźnione pakiety i wybiera najwcześniejszy klik
-#define ROUND_START_LEAD_MS 1000  // diody gasną na tyle przed startem gry, potem zapalają się razem
+#define ROUND_START_LEAD_MS 1000  // tyle mija od Startu / kompletu przycisków do chwili, od której liczą się kliknięcia
 #define PRESS_RETRY_MS 20
 #define PRESS_MAX_RETRIES 10
 #define HISTORY_SIZE 50

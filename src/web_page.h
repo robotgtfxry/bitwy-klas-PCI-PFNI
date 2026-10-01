@@ -56,6 +56,7 @@ button:disabled{opacity:.4;cursor:default}
 .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 input{width:130px;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+input[type=color]{width:64px;height:38px;padding:3px;cursor:pointer}
 .scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -109,13 +110,20 @@ th{font-size:12px;font-weight:500;color:var(--muted)}
   </section>
 
   <section class="card">
+    <h2>Światła</h2>
+    <div class="row">
+      <label>Kolor<input id="cCol" type="color"></label>
+    </div>
+  </section>
+
+  <section class="card">
     <h2>Historia rund</h2>
     <div id="hist" class="scroll"><div class="empty">Brak rozegranych rund.</div></div>
   </section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let ws=null,S=null,rxAt=0;
+let ws=null,S=null,rxAt=0,ledEdit=false;
 
 function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 function connect(){
@@ -200,6 +208,7 @@ function render(){
   const t=$('bTest');t.classList.toggle('on',S.st===3);t.textContent=S.st===3?'Zakończ test':'Tryb testu';
   if(document.activeElement!==$('cLock'))$('cLock').value=S.lockMs/1000;
   if(document.activeElement!==$('cExp'))$('cExp').value=S.expected;
+  if(!ledEdit)$('cCol').value='#'+S.ledC.toString(16).padStart(6,'0');
 }
 
 function renderHist(items){
@@ -235,6 +244,8 @@ $('bCfg').onclick=()=>{
   if(!(expected>=2&&expected<=10)){alert('Liczba przycisków: od 2 do 10');return}
   send({c:'cfg',lockMs,expected});document.activeElement.blur();
 };
+$('cCol').oninput=()=>{ledEdit=true};
+$('cCol').onchange=()=>{ledEdit=false;send({c:'led',color:parseInt($('cCol').value.slice(1),16)})};
 (function tick(){renderStatus();requestAnimationFrame(tick)})();
 connect();
 </script>
