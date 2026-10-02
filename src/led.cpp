@@ -17,9 +17,12 @@ int lastLevel = -1;
 #if LED_STRIP_PIN >= 0
 Adafruit_NeoPixel strip(LED_STRIP_COUNT, LED_STRIP_PIN, LED_STRIP_TYPE);
 uint32_t stripColor = LED_STRIP_COLOR;
+bool stripEnabled = LED_STRIP_DEFAULT_ON;
+uint8_t stripBrightness = LED_STRIP_BRIGHTNESS;
 
 void showStrip(bool on) {
-  strip.fill(on ? stripColor : 0);
+  strip.setBrightness(stripBrightness);
+  strip.fill(on && stripEnabled ? stripColor : 0);
   strip.show();
 }
 #endif
@@ -54,10 +57,12 @@ void led_identify() {
   identifyActive = true;
 }
 
-void led_setStripColor(uint32_t color) {
+void led_setStrip(uint32_t color, bool enabled, uint8_t brightness) {
 #if LED_STRIP_PIN >= 0
-  if (color == stripColor) return;
+  if (color == stripColor && enabled == stripEnabled && brightness == stripBrightness) return;
   stripColor = color;
+  stripEnabled = enabled;
+  stripBrightness = brightness;
   if (lastLevel == 1) showStrip(true);
 #endif
 }

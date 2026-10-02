@@ -57,6 +57,7 @@ button:disabled{opacity:.4;cursor:default}
 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 input{width:130px;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 input[type=color]{width:64px;height:38px;padding:3px;cursor:pointer}
+input[type=range]{width:200px;max-width:100%;height:38px;padding:0;border:0;background:none;cursor:pointer}
 .scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -112,7 +113,9 @@ th{font-size:12px;font-weight:500;color:var(--muted)}
   <section class="card">
     <h2>Światła</h2>
     <div class="row">
+      <button id="bLed">Taśma LED: wyłączona</button>
       <label>Kolor<input id="cCol" type="color"></label>
+      <label><span id="lBri">Jasność</span><input id="cBri" type="range" min="1" max="100" step="1"></label>
     </div>
   </section>
 
@@ -123,7 +126,7 @@ th{font-size:12px;font-weight:500;color:var(--muted)}
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let ws=null,S=null,rxAt=0,ledEdit=false;
+let ws=null,S=null,rxAt=0,ledEdit=false,briEdit=false;
 
 function send(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 function connect(){
@@ -209,6 +212,8 @@ function render(){
   if(document.activeElement!==$('cLock'))$('cLock').value=S.lockMs/1000;
   if(document.activeElement!==$('cExp'))$('cExp').value=S.expected;
   if(!ledEdit)$('cCol').value='#'+S.ledC.toString(16).padStart(6,'0');
+  if(!briEdit){$('cBri').value=Math.max(1,Math.round(S.ledB*100/255));showBri()}
+  const l=$('bLed');l.classList.toggle('on',S.ledOn);l.textContent=S.ledOn?'Taśma LED: włączona':'Taśma LED: wyłączona';
 }
 
 function renderHist(items){
@@ -244,8 +249,13 @@ $('bCfg').onclick=()=>{
   if(!(expected>=2&&expected<=10)){alert('Liczba przycisków: od 2 do 10');return}
   send({c:'cfg',lockMs,expected});document.activeElement.blur();
 };
+function showBri(){$('lBri').textContent=`Jasność ${$('cBri').value}%`}
+function sendLed(on){if(S)send({c:'led',on,color:parseInt($('cCol').value.slice(1),16),bri:Math.max(1,Math.round($('cBri').value*255/100))})}
+$('bLed').onclick=()=>{if(S)sendLed(!S.ledOn)};
 $('cCol').oninput=()=>{ledEdit=true};
-$('cCol').onchange=()=>{ledEdit=false;send({c:'led',color:parseInt($('cCol').value.slice(1),16)})};
+$('cCol').onchange=()=>{ledEdit=false;if(S)sendLed(S.ledOn)};
+$('cBri').oninput=()=>{briEdit=true;showBri()};
+$('cBri').onchange=()=>{briEdit=false;if(S)sendLed(S.ledOn)};
 (function tick(){renderStatus();requestAnimationFrame(tick)})();
 connect();
 </script>

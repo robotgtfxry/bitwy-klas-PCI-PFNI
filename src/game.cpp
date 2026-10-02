@@ -44,6 +44,8 @@ void resetSnapshot() {
   snap.lockMs = storage_config().lockMs;
   snap.expectedNodes = storage_config().expectedNodes;
   snap.stripColor = storage_config().stripColor;
+  snap.stripOn = storage_config().stripOn;
+  snap.stripBright = storage_config().stripBright;
   candCount = 0;
 }
 
@@ -272,7 +274,7 @@ bool selfReady() {
 
 void game_begin() {
   resetSnapshot();
-  led_setStripColor(snap.stripColor);
+  led_setStrip(snap.stripColor, snap.stripOn, snap.stripBright);
   pressSeq = esp_random();  // po restarcie płytki master nie weźmie nowych klików za powtórki
 }
 
@@ -329,8 +331,8 @@ void game_onBeacon(const GameSnapshot& s) {
   snap = s;
   // Zapamiętaj ustawienia – przydadzą się, gdyby ta płytka została kiedyś masterem.
   storage_setConfig(s.lockMs, s.expectedNodes);
-  storage_setStripColor(s.stripColor);
-  led_setStripColor(s.stripColor);
+  storage_setStrip(s.stripColor, s.stripOn, s.stripBright);
+  led_setStrip(s.stripColor, s.stripOn, s.stripBright);
 }
 
 void game_onPress(NodeInfo* n, const PressMsg& m) {
@@ -450,13 +452,17 @@ void game_cmdConfig(uint32_t lockMs, uint32_t expectedNodes) {
   changed();
 }
 
-void game_cmdLights(uint32_t color) {
+void game_cmdLights(uint32_t color, bool on, uint32_t brightness) {
   color &= 0xFFFFFF;
-  storage_setStripColor(color);
+  brightness = constrain(brightness, 1u, 255u);
+  storage_setStrip(color, on, brightness);
   snap.stripColor = color;
-  led_setStripColor(color);
-  Serial.printf("[GRA] Światła: kolor #%06X\n", (unsigned)color);
-  changed();  // beacon od razu – slave'y przejmują kolor i zapisują go u siebie
+  snap.stripOn = on;
+  snap.stripBright = brightness;
+  led_setStrip(color, on, brightness);
+  Serial.printf("[GRA] Światła: taśma %s, kolor #%06X, jasność %u/255\n", on ? "włączona" : "wyłączona",
+                (unsigned)color, (unsigned)brightness);
+  changed();  // beacon od razu – slave'y przejmują ustawienia i zapisują je u siebie
 }
 
 int game_historyCount() { return histCount; }

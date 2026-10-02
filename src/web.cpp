@@ -30,6 +30,7 @@ struct WebCmd {
   uint8_t id[6];
   int32_t a;
   int32_t b;
+  int32_t c;
   char name[NAME_LEN + 1];
 };
 
@@ -77,6 +78,8 @@ void onWsEvent(AsyncWebSocket*, AsyncWebSocketClient*, AwsEventType type, void* 
   } else if (!strcmp(c, "led")) {
     cmd.type = WC_LIGHTS;
     cmd.a = doc["color"] | (int)LED_STRIP_COLOR;
+    cmd.b = doc["on"] | false;
+    cmd.c = doc["bri"] | (int)LED_STRIP_BRIGHTNESS;
   } else if (!strcmp(c, "identify") || !strcmp(c, "name") || !strcmp(c, "enable")) {
     if (!strToMac(doc["id"] | "", cmd.id)) return;
     if (c[0] == 'i') {
@@ -105,7 +108,7 @@ void execute(const WebCmd& cmd) {
     case WC_NAME: game_cmdRename(cmd.id, cmd.name); break;
     case WC_ENABLE: game_cmdEnable(cmd.id, cmd.a); break;
     case WC_CONFIG: game_cmdConfig(cmd.a, cmd.b); break;
-    case WC_LIGHTS: game_cmdLights(cmd.a); break;
+    case WC_LIGHTS: game_cmdLights(cmd.a, cmd.b, cmd.c); break;
   }
   dirty = true;
 }
@@ -129,6 +132,8 @@ void pushState() {
   d["expected"] = s.expectedNodes;
   d["lockMs"] = s.lockMs;
   d["ledC"] = s.stripColor;
+  d["ledOn"] = (bool)s.stripOn;
+  d["ledB"] = s.stripBright;
   if (s.state == GS_ARMED) {
     d["elapsed"] = now >= s.roundStartAt ? (long)((now - s.roundStartAt) / 1000) : -1;
     d["startsIn"] = now < s.roundStartAt ? (long)((s.roundStartAt - now) / 1000) : 0;

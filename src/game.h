@@ -39,7 +39,7 @@ void game_cmdIdentify(const uint8_t* id);
 void game_cmdRename(const uint8_t* id, const char* name);
 void game_cmdEnable(const uint8_t* id, bool enabled);
 void game_cmdConfig(uint32_t lockMs, uint32_t expectedNodes);
-void game_cmdLights(uint32_t color);
+void game_cmdLights(uint32_t color, bool on, uint32_t brightness);
 
 // Historia (tylko master), 0 = najnowsza runda
 int game_historyCount();

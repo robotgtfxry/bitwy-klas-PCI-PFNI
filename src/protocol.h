@@ -5,7 +5,7 @@
 #include "config.h"
 
 #define PROTO_MAGIC 0xB17A
-#define PROTO_VERSION 5
+#define PROTO_VERSION 6
 
 enum MsgType : uint8_t {
   MSG_BEACON = 1,  // master -> wszyscy (broadcast)
@@ -46,6 +46,8 @@ struct __attribute__((packed)) GameSnapshot {
   uint8_t expectedNodes;
   uint16_t readyMask;  // bit (numer-1): przycisk kliknięty po dołączeniu = gotowy
   uint32_t stripColor;  // taśma LED: 0xRRGGBB
+  uint8_t stripOn;      // taśma LED aktywna
+  uint8_t stripBright;  // jasność taśmy 1..255
 };
 
 struct __attribute__((packed)) BeaconMsg {

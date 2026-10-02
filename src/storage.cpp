@@ -33,6 +33,8 @@ void storage_begin() {
   cfg.lockMs = prefs.isKey("lockMs") ? prefs.getUShort("lockMs") : DEFAULT_LOCK_MS;
   cfg.expectedNodes = prefs.isKey("expN") ? prefs.getUChar("expN") : DEFAULT_EXPECTED_NODES;
   cfg.stripColor = prefs.isKey("ledC") ? prefs.getUInt("ledC") : LED_STRIP_COLOR;
+  cfg.stripOn = prefs.isKey("ledOn") ? prefs.getBool("ledOn") : LED_STRIP_DEFAULT_ON;
+  cfg.stripBright = prefs.isKey("ledB") ? prefs.getUChar("ledB") : LED_STRIP_BRIGHTNESS;
 }
 
 NodeSettings& storage_node() { return node; }
@@ -57,8 +59,17 @@ void storage_setConfig(uint16_t lockMs, uint8_t expectedNodes) {
   prefs.putUChar("expN", expectedNodes);
 }
 
-void storage_setStripColor(uint32_t color) {
-  if (cfg.stripColor == color) return;
-  cfg.stripColor = color;
-  prefs.putUInt("ledC", color);
+void storage_setStrip(uint32_t color, bool on, uint8_t brightness) {
+  if (cfg.stripColor != color) {
+    cfg.stripColor = color;
+    prefs.putUInt("ledC", color);
+  }
+  if (cfg.stripOn != on) {
+    cfg.stripOn = on;
+    prefs.putBool("ledOn", on);
+  }
+  if (cfg.stripBright != brightness) {
+    cfg.stripBright = brightness;
+    prefs.putUChar("ledB", brightness);
+  }
 }
