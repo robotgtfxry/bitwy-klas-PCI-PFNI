@@ -462,7 +462,7 @@ void game_cmdLights(uint32_t color, bool on, uint32_t brightness) {
   led_setStrip(color, on, brightness);
   Serial.printf("[GRA] Światła: taśma %s, kolor #%06X, jasność %u/255\n", on ? "włączona" : "wyłączona",
                 (unsigned)color, (unsigned)brightness);
-  changed();  // beacon od razu – slave'y przejmują ustawienia i zapisują je u siebie
+  changed();  // beacon od razu – slave'y przejmują ustawienia (kolor i jasność zapisują u siebie)
 }
 
 int game_historyCount() { return histCount; }

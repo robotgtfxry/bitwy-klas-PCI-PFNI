@@ -33,7 +33,9 @@ void storage_begin() {
   cfg.lockMs = prefs.isKey("lockMs") ? prefs.getUShort("lockMs") : DEFAULT_LOCK_MS;
   cfg.expectedNodes = prefs.isKey("expN") ? prefs.getUChar("expN") : DEFAULT_EXPECTED_NODES;
   cfg.stripColor = prefs.isKey("ledC") ? prefs.getUInt("ledC") : LED_STRIP_COLOR;
-  cfg.stripOn = prefs.isKey("ledOn") ? prefs.getBool("ledOn") : LED_STRIP_DEFAULT_ON;
+  // Włączenie taśmy żyje tylko do restartu – po włączeniu zestawu taśma jest zawsze wyłączona.
+  cfg.stripOn = LED_STRIP_DEFAULT_ON;
+  if (prefs.isKey("ledOn")) prefs.remove("ledOn");  // sprzątanie po wersji, która to zapisywała
   cfg.stripBright = prefs.isKey("ledB") ? prefs.getUChar("ledB") : LED_STRIP_BRIGHTNESS;
 }
 
@@ -64,10 +66,7 @@ void storage_setStrip(uint32_t color, bool on, uint8_t brightness) {
     cfg.stripColor = color;
     prefs.putUInt("ledC", color);
   }
-  if (cfg.stripOn != on) {
-    cfg.stripOn = on;
-    prefs.putBool("ledOn", on);
-  }
+  cfg.stripOn = on;  // tylko w RAM: przetrwa zmianę mastera, ale nie restart
   if (cfg.stripBright != brightness) {
     cfg.stripBright = brightness;
     prefs.putUChar("ledB", brightness);

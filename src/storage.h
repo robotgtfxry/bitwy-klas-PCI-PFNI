@@ -13,7 +13,7 @@ struct GameConfig {
   uint16_t lockMs;
   uint8_t expectedNodes;
   uint32_t stripColor;  // 0xRRGGBB
-  bool stripOn;         // taśma LED aktywna
+  bool stripOn;         // taśma LED aktywna (tylko w RAM – po restarcie znów wyłączona)
   uint8_t stripBright;  // 1..255
 };
 

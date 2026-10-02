@@ -13,10 +13,11 @@
 // Taśma LED adresowana (WS2812B / NeoPixel, 5V–DI–GND) – świeci dokładnie tak jak dioda z D5
 #define LED_STRIP_PIN 13          // D13 -> DI taśmy (-1 = wyłączone)
 #define LED_STRIP_COUNT 30        // liczba diod na taśmie
-// Taśma jest fabrycznie wyłączona – włącza się ją w panelu WWW, tam też ustawia się kolor i jasność
-// (master rozsyła je w beaconie). Poniżej wartości fabryczne.
+// Po każdym włączeniu zestawu taśma jest wyłączona – włącza się ją w panelu WWW (nie jest to zapisywane).
+// Kolor i jasność też ustawia się w panelu (master rozsyła je w beaconie, są zapamiętywane) –
+// poniżej wartości fabryczne.
 // Pełna biel przy pełnej jasności = ~60 mA na diodę – dłuższą taśmę zasilać osobno.
-#define LED_STRIP_DEFAULT_ON 0    // 1: taśma aktywna od razu po wgraniu
+#define LED_STRIP_DEFAULT_ON 0    // 1: taśma aktywna od razu po włączeniu płytki
 #define LED_STRIP_COLOR 0xFFFFFF  // kolor świecenia, 0xRRGGBB
 #define LED_STRIP_BRIGHTNESS 255  // jasność 1..255
 #define LED_STRIP_TYPE (NEO_GRB + NEO_KHZ800)
